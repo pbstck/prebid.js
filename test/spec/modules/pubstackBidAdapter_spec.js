@@ -76,6 +76,28 @@ describe('pubstackBidAdapter', function () {
   const getDecodedSyncPayload = (sync) =>
     JSON.parse(atob(new URL(sync.url).searchParams.get('consent')));
 
+  const addElement = (doc, id) => {
+    const element = doc.createElement('div');
+    element.id = id;
+    doc.body.appendChild(element);
+    return element;
+  };
+
+  const addElementsForWindowContexts = (id) => {
+    const elements = [addElement(document, id)];
+    const topDocument = window.top?.document;
+    if (topDocument && topDocument !== document) {
+      elements.push(addElement(topDocument, id));
+    }
+    return elements;
+  };
+
+  const removeElements = (elements) => {
+    elements.forEach((element) => {
+      element?.parentNode?.removeChild(element);
+    });
+  };
+
   before(() => {
     hook.ready();
   });
@@ -101,15 +123,17 @@ describe('pubstackBidAdapter', function () {
       expect(spec.isBidRequestValid(createBidRequest({ params: { adUnitName: undefined } }))).to.equal(false);
     });
 
-    it('returns true for invalid params when debug is enabled', function () {
+    it('returns false for invalid params when debug is enabled', function () {
       config.setConfig({ debug: true });
-      expect(spec.isBidRequestValid(createBidRequest({ params: { siteId: undefined } }))).to.equal(true);
-      expect(spec.isBidRequestValid(createBidRequest({ params: { adUnitName: undefined } }))).to.equal(true);
+      expect(spec.isBidRequestValid(createBidRequest({ params: { siteId: undefined } }))).to.equal(false);
+      expect(spec.isBidRequestValid(createBidRequest({ params: { adUnitName: undefined } }))).to.equal(false);
     });
   });
 
   describe('buildRequests', function () {
     it('builds a POST request with ORTB data and bidder extensions', function () {
+      const elements = addElementsForWindowContexts('adunit-code');
+
       const bidRequest = createBidRequest();
       const bidderRequest = createBidderRequest(bidRequest);
       const request = spec.buildRequests([bidRequest], bidderRequest);
@@ -132,6 +156,8 @@ describe('pubstackBidAdapter', function () {
       expect(utils.deepAccess(request, 'data.ext.prebid.page.height')).to.be.a('number');
       expect(utils.deepAccess(request, 'data.ext.prebid.page.viewportHeight')).to.be.a('number');
       expect(utils.deepAccess(request, 'data.ext.prebid.page.timeFromNavigation')).to.be.a('number');
+
+      removeElements(elements);
     });
 
     it('sets test to 1 when prebid debug mode is enabled', function () {
@@ -170,11 +196,25 @@ describe('pubstackBidAdapter', function () {
     });
 
     it('uses GPT slot divId when ad unit element is missing', function () {
-      const div = document.createElement('div');
-      div.id = 'gpt-div-id';
-      document.body.appendChild(div);
-
-      sandbox.stub(gptUtils, 'getGptSlotInfoForAdUnitCode').returns({ divId: 'gpt-div-id' });
+      const elements = addElementsForWindowContexts('gpt-div-id');
+      const originalGoogletag = window.googletag;
+      window.googletag = {
+        pubads() {
+          return {
+            getSlots() {
+              return [{
+                getAdUnitPath() {
+                  return 'missing-adunit';
+                },
+                getSlotElementId() {
+                  return 'gpt-div-id';
+                }
+              }];
+            }
+          };
+        }
+      };
+      gptUtils.clearSlotInfoCache();
 
       const bidRequest = createBidRequest({ adUnitCode: 'missing-adunit' });
       const bidderRequest = createBidderRequest(bidRequest);
@@ -183,11 +223,23 @@ describe('pubstackBidAdapter', function () {
       expect(utils.deepAccess(request, 'data.imp.0.ext.prebid.placement.domId')).to.equal('gpt-div-id');
       expect(utils.deepAccess(request, 'data.imp.0.ext.prebid.placement.viewability')).to.be.a('number');
 
-      document.body.removeChild(div);
+      window.googletag = originalGoogletag;
+      gptUtils.clearSlotInfoCache();
+      removeElements(elements);
     });
 
     it('omits placement details when no element is found', function () {
-      sandbox.stub(gptUtils, 'getGptSlotInfoForAdUnitCode').returns(undefined);
+      const originalGoogletag = window.googletag;
+      window.googletag = {
+        pubads() {
+          return {
+            getSlots() {
+              return [];
+            }
+          };
+        }
+      };
+      gptUtils.clearSlotInfoCache();
 
       const bidRequest = createBidRequest({ adUnitCode: 'missing-element' });
       const bidderRequest = createBidderRequest(bidRequest);
@@ -198,6 +250,9 @@ describe('pubstackBidAdapter', function () {
       expect(utils.deepAccess(request, 'data.imp.0.ext.prebid.placement.viewportDistance')).to.equal(undefined);
       expect(utils.deepAccess(request, 'data.imp.0.ext.prebid.placement.height')).to.equal(undefined);
       expect(utils.deepAccess(request, 'data.imp.0.ext.prebid.placement.auctionsCount')).to.equal(undefined);
+
+      window.googletag = originalGoogletag;
+      gptUtils.clearSlotInfoCache();
     });
 
     it('uses unknown version when prebid global is unavailable', function () {
@@ -211,13 +266,14 @@ describe('pubstackBidAdapter', function () {
     });
 
     it('includes falsy placement environment values', function () {
-      const originalVisibility = Object.getOwnPropertyDescriptor(document, 'visibilityState');
-      if (originalVisibility && originalVisibility.configurable === false) {
-        this.skip();
-      }
-      Object.defineProperty(document, 'visibilityState', {
-        configurable: true,
-        value: 'hidden'
+      const originalVisibility = document.visibilityState;
+      const topDocument = window.top?.document || document;
+      const originalTopVisibility = topDocument.visibilityState;
+      document['__defineGetter__']('visibilityState', function () {
+        return 'hidden';
+      });
+      topDocument['__defineGetter__']('visibilityState', function () {
+        return 'hidden';
       });
       sandbox.stub(performance, 'now').returns(0);
 
@@ -228,11 +284,12 @@ describe('pubstackBidAdapter', function () {
       expect(utils.deepAccess(request, 'data.ext.prebid.page.tabActive')).to.equal(false);
       expect(utils.deepAccess(request, 'data.ext.prebid.page.timeFromNavigation')).to.equal(0);
 
-      if (originalVisibility) {
-        Object.defineProperty(document, 'visibilityState', originalVisibility);
-      } else {
-        delete document.visibilityState;
-      }
+      document['__defineGetter__']('visibilityState', function () {
+        return originalVisibility;
+      });
+      topDocument['__defineGetter__']('visibilityState', function () {
+        return originalTopVisibility;
+      });
     });
   });
 

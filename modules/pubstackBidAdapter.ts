@@ -90,11 +90,11 @@ const converter = ortbConverter({
 const isBidRequestValid = (bid: BidRequest<typeof BIDDER_CODE>): boolean => {
   if (!bid.params.siteId || typeof bid.params.siteId !== 'string') {
     logError('bid.params.siteId needs to be a string');
-    if (config.getConfig('debug') === false) return false;
+    return false;
   }
   if (!bid.params.adUnitName || typeof bid.params.adUnitName !== 'string') {
     logError('bid.params.adUnitName needs to be a string');
-    if (config.getConfig('debug') === false) return false;
+    return false;
   }
   return true;
 };
