@@ -23,6 +23,7 @@ export const EVENTS = {
   BID_TIMEOUT: 'bidTimeout',
   BID_REQUESTED: 'bidRequested',
   BID_RESPONSE: 'bidResponse',
+  BID_ACCEPTED: 'bidAccepted',
   BID_REJECTED: 'bidRejected',
   NO_BID: 'noBid',
   BID_WON: 'bidWon',
@@ -117,6 +118,7 @@ export const NATIVE_KEYS = {
   phone: 'hb_native_phone',
   price: 'hb_native_price',
   salePrice: 'hb_native_saleprice',
+  video: 'hb_native_video',
   rendererUrl: 'hb_renderer_url',
   adTemplate: 'hb_adTemplate'
 };

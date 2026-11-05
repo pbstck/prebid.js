@@ -146,11 +146,6 @@ const converter = ortbConverter({
       if (deepAccess(bidRequest, 'mediaTypes.video.context') === 'instream') {
         extANData.require_asset_url = true;
       }
-
-      if (imp.video.plcmt) {
-        imp.video.placement = imp.video.plcmt;
-        delete imp.video.plcmt;
-      }
     }
 
     if (bidderParams) {
@@ -208,6 +203,18 @@ const converter = ortbConverter({
           eid.rti_partner = 'UID2';
         }
       });
+    }
+
+    if (bidderRequest?.gdprConsent?.addtlConsent && bidderRequest.gdprConsent.addtlConsent.indexOf('~') !== -1) {
+      const ac = bidderRequest.gdprConsent.addtlConsent;
+      const segments = ac.split('~');
+      const consentedSegment = segments[1] || '';
+      // ACv1 uses: version~vendorIds; ACv2 uses: version~consentedVendorIds~dv.disclosedVendorIds
+      // Only the consented-vendor segment should be populated into user.ext.addtl_consent.
+      const addtlConsent = consentedSegment.split('.').map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+      if (addtlConsent.length > 0) {
+        deepSetValue(request, 'user.ext.addtl_consent', addtlConsent);
+      }
     }
 
     const extANData = {
@@ -320,7 +327,11 @@ const converter = ortbConverter({
 export const spec = {
   code: BIDDER_CODE,
   gvlid: GVLID,
-  aliases: [], // TODO fill in after full transition or as seperately requested
+  aliases: [
+    { code: 'oftmedia', gvlid: 32 },
+    { code: 'msftstaila', gvlid: 32 },
+    { code: 'projectagora', gvlid: 1032 }
+  ], // TODO fill in after full transition or as separately requested
   supportedMediaTypes: [BANNER, NATIVE, VIDEO],
 
   isBidRequestValid: (bid) => {

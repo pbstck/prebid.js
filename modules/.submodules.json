@@ -2,12 +2,15 @@
   "parentModules": {
     "userId": [
       "33acrossIdSystem",
+      "abtshieldIdSystem",
+      "acxiomRealIdSystem",
       "admixerIdSystem",
       "adqueryIdSystem",
       "adplusIdSystem",
       "adriverIdSystem",
       "adtelligentIdSystem",
       "amxIdSystem",
+      "anonymisedIdSystem",
       "ceeIdSystem",
       "connectIdSystem",
       "criteoIdSystem",
@@ -49,7 +52,9 @@
       "pubProvidedIdSystem",
       "publinkIdSystem",
       "pubmaticIdSystem",
+      "rediadsIdSystem",
       "rewardedInterestIdSystem",
+      "sevioIdSystem",
       "sharedIdSystem",
       "startioIdSystem",
       "taboolaIdSystem",
@@ -73,6 +78,7 @@
       "adlooxRtdProvider",
       "adlaneRtdProvider",
       "adnuntiusRtdProvider",
+      "agenticAudienceRtdProvider",
       "airgridRtdProvider",
       "akamaiDapRtdProvider",
       "anonymisedRtdProvider",
@@ -98,13 +104,16 @@
       "hadronRtdProvider",
       "humansecurityRtdProvider",
       "iasRtdProvider",
+      "insuradsRtdProvider",
       "imRtdProvider",
       "intersectionRtdProvider",
       "jwplayerRtdProvider",
       "liveIntentRtdProvider",
+      "mantisRtdProvider",
       "mediafilterRtdProvider",
       "medianetRtdProvider",
       "mgidRtdProvider",
+      "mileRtdProvider",
       "mobianRtdProvider",
       "neuwoRtdProvider",
       "nodalsAiRtdProvider",
@@ -128,8 +137,11 @@
       "sirdataRtdProvider",
       "symitriDapRtdProvider",
       "timeoutRtdProvider",
+      "transfonSecurityRtdProvider",
       "weboramaRtdProvider",
-      "wurflRtdProvider"
+      "wurflRtdProvider",
+      "encypherRtdProvider",
+      "stackupRtdProvider"
     ],
     "fpdModule": [
       "validationFpdModule",
@@ -139,6 +151,9 @@
       "jwplayerVideoProvider",
       "videojsVideoProvider",
       "adplayerproVideoProvider"
+    ],
+    "genericAnalyticsAdapter": [
+      "genericAnalyticsSkinnyEvents"
     ]
   }
 }

@@ -1,4 +1,4 @@
-import type { AllConsentData } from "../../src/consentHandler.ts";
+import type { AllConsentData, GVLIDs } from "../../src/consentHandler.ts";
 import type { AdUnitCode, ByAdUnit, StorageDisclosure } from "../../src/types/common";
 import { EVENTS } from '../../src/constants.ts';
 import type { EventPayload } from "../../src/events.ts";
@@ -23,7 +23,7 @@ type BaseConfig<P extends RTDProvider> = {
    * If true, delay the auction up to `auctionDelay` milliseconds to wait for this module.
    */
   waitForIt?: boolean;
-}
+};
 
 export type RTDProviderConfig<P extends RTDProvider> = BaseConfig<P> & (
     P extends keyof ProviderConfig ? ProviderConfig[P] : Record<string, unknown>
@@ -32,7 +32,8 @@ export type RTDProviderConfig<P extends RTDProvider> = BaseConfig<P> & (
 type RTDEvent = typeof EVENTS.AUCTION_INIT |
     typeof EVENTS.AUCTION_END |
     typeof EVENTS.BID_RESPONSE |
-    typeof EVENTS.BID_REQUESTED;
+    typeof EVENTS.BID_REQUESTED |
+    typeof EVENTS.BID_ACCEPTED;
 
 type EventHandlers<P extends RTDProvider> = {
   [EV in RTDEvent]: (payload: EventPayload<EV>, config: RTDProviderConfig<P>, consent: AllConsentData) => void;
@@ -44,9 +45,17 @@ export type RtdProviderSpec<P extends RTDProvider> = Partial<EventHandlers<P>> &
    */
   name: P;
   /**
-   * global vendor list ID for your submodule
+   * global vendor list ID for your submodule.
+   * May be a list, for submodules that act on behalf of several vendors; all of them then need a legal basis.
    */
-  gvlid?: number;
+  gvlid?: GVLIDs;
+  /**
+   * Google Additional Consent provider ID, for vendors that are not on the GVL.
+   * Used by the TCF control module to check vendor consent against the CMP's Additional Consent string
+   * when the module has no GVL ID. This is a different ID space from GVL IDs.
+   * @see https://support.google.com/admanager/answer/9681920
+   */
+  acpId?: number;
   /**
    * Invoked once on initialization.
    */
@@ -54,7 +63,7 @@ export type RtdProviderSpec<P extends RTDProvider> = Partial<EventHandlers<P>> &
   getTargetingData?: (adUnitCodes: AdUnitCode[], config: RTDProviderConfig<P>, consent: AllConsentData, auction: EventPayload<typeof EVENTS.AUCTION_END>) => ByAdUnit<TargetingMap<any>>;
   getBidRequestData?: (request: StartAuctionOptions, callback: () => void, config: RTDProviderConfig<P>, consent: AllConsentData, timeout: number) => void;
   onDataDeletionRequest?: (config: RTDProviderConfig<P>) => void;
-}
+};
 
 declare module '../../src/hook' {
   interface Submodules {
