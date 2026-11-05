@@ -10,6 +10,7 @@ import { SyncType } from '../src/userSync.js';
 import { ConsentDataForKey, CONSENT_GDPR, CONSENT_USP, CONSENT_GPP } from '../src/consentHandler.js';
 import { getGlobal } from '../src/prebidGlobal.js';
 import { getAdUnitElement } from '../src/utils/adUnits.js';
+import { addEventTrackers } from '../libraries/pbsExtensions/processors/eventTrackers.js';
 
 const BIDDER_CODE = 'pubstack';
 const GVLID = 1408;
@@ -77,11 +78,14 @@ const converter = ortbConverter({
     return request;
   },
   bidResponse(buildBidResponse, bid, context) {
-    return {
+    const bidResponse = {
       ...buildBidResponse(bid, context),
       ttl: (bid as any).ttl ?? bid.exp ?? DEFAULT_TTL,
       netRevenue: (bid as any).netRevenue ?? DEFAULT_NET_REVENUE,
     };
+    // Same trackers as the Prebid Server adapter: burl fires on billing, ext.prebid.events.win on bid won
+    addEventTrackers(bidResponse, bid);
+    return bidResponse;
   },
 });
 

@@ -319,6 +319,58 @@ describe('pubstackBidAdapter', function () {
 
       expect(extractBids(spec.interpretResponse(serverResponse, request))).to.deep.equal([]);
     });
+
+    it('converts burl and ext.prebid.events.win into event trackers, like the Prebid Server adapter', function () {
+      const bidRequest = createBidRequest({ bidId: 'bid-trackers' });
+      const request = spec.buildRequests([bidRequest], createBidderRequest(bidRequest));
+      const serverResponse = {
+        body: {
+          cur: 'USD',
+          seatbid: [{
+            bid: [{
+              impid: 'bid-trackers',
+              mtype: 1,
+              price: 1.5,
+              w: 300,
+              h: 250,
+              adm: '<div>ad</div>',
+              crid: 'creative-trackers',
+              burl: 'https://node.pbstck.com/billing',
+              ext: { prebid: { events: { win: 'https://node.pbstck.com/event?t=win' } } }
+            }]
+          }]
+        }
+      };
+
+      const bids = extractBids(spec.interpretResponse(serverResponse, request));
+      expect(bids[0].eventtrackers).to.deep.equal([
+        { method: 1, event: 1, url: 'https://node.pbstck.com/billing' },
+        { method: 1, event: 500, url: 'https://node.pbstck.com/event?t=win' }
+      ]);
+    });
+
+    it('adds no event trackers when the bid has neither burl nor win url', function () {
+      const bidRequest = createBidRequest({ bidId: 'bid-no-trackers' });
+      const request = spec.buildRequests([bidRequest], createBidderRequest(bidRequest));
+      const serverResponse = {
+        body: {
+          seatbid: [{
+            bid: [{
+              impid: 'bid-no-trackers',
+              mtype: 1,
+              price: 1.5,
+              w: 300,
+              h: 250,
+              adm: '<div>ad</div>',
+              crid: 'creative-no-trackers'
+            }]
+          }]
+        }
+      };
+
+      const bids = extractBids(spec.interpretResponse(serverResponse, request));
+      expect(bids[0].eventtrackers).to.deep.equal([]);
+    });
   });
 
   describe('getUserSyncs', function () {
