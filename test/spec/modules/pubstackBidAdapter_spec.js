@@ -371,6 +371,34 @@ describe('pubstackBidAdapter', function () {
       const bids = extractBids(spec.interpretResponse(serverResponse, request));
       expect(bids[0].eventtrackers).to.deep.equal([]);
     });
+
+    it('reads the video cache of an instream bid, like the Prebid Server adapter', function () {
+      const bidRequest = createBidRequest({
+        bidId: 'bid-instream',
+        mediaTypes: { video: { context: 'instream', playerSize: [[640, 480]], mimes: ['video/mp4'] } }
+      });
+      const request = spec.buildRequests([bidRequest], createBidderRequest(bidRequest));
+      const serverResponse = {
+        body: {
+          seatbid: [{
+            bid: [{
+              impid: 'bid-instream',
+              mtype: 2,
+              price: 1.5,
+              w: 640,
+              h: 480,
+              adm: '<VAST version="3.0"></VAST>',
+              crid: 'creative-instream',
+              ext: { prebid: { cache: { vastXml: { cacheId: 'cache-uuid', url: 'https://cache.pbstck.com/cache?uuid=cache-uuid' } } } }
+            }]
+          }]
+        }
+      };
+
+      const bids = extractBids(spec.interpretResponse(serverResponse, request));
+      expect(bids[0].videoCacheKey).to.equal('cache-uuid');
+      expect(bids[0].vastUrl).to.equal('https://cache.pbstck.com/cache?uuid=cache-uuid');
+    });
   });
 
   describe('getUserSyncs', function () {

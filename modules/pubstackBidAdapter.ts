@@ -11,6 +11,7 @@ import { ConsentDataForKey, CONSENT_GDPR, CONSENT_USP, CONSENT_GPP } from '../sr
 import { getGlobal } from '../src/prebidGlobal.js';
 import { getAdUnitElement } from '../src/utils/adUnits.js';
 import { addEventTrackers } from '../libraries/pbsExtensions/processors/eventTrackers.js';
+import { setBidResponseVideoCache } from '../libraries/pbsExtensions/processors/video.js';
 
 const BIDDER_CODE = 'pubstack';
 const GVLID = 1408;
@@ -85,6 +86,8 @@ const converter = ortbConverter({
     };
     // Same trackers as the Prebid Server adapter: burl fires on billing, ext.prebid.events.win on bid won
     addEventTrackers(bidResponse, bid);
+    // Same as the Prebid Server adapter: an instream VAST is played from the cache that wraps its impression tracker
+    setBidResponseVideoCache(bidResponse, bid);
     return bidResponse;
   },
 });
