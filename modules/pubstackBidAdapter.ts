@@ -84,9 +84,7 @@ const converter = ortbConverter({
       ttl: (bid as any).ttl ?? bid.exp ?? DEFAULT_TTL,
       netRevenue: (bid as any).netRevenue ?? DEFAULT_NET_REVENUE,
     };
-    // Same trackers as the Prebid Server adapter: burl fires on billing, ext.prebid.events.win on bid won
     addEventTrackers(bidResponse, bid);
-    // Same as the Prebid Server adapter: an instream VAST is played from the cache that wraps its impression tracker
     setBidResponseVideoCache(bidResponse, bid);
     return bidResponse;
   },
