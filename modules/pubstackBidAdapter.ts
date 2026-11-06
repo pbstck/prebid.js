@@ -1,4 +1,4 @@
-import { deepSetValue, logError } from '../src/utils.js';
+import { deepSetValue, isPlainObject, logError, mergeDeep } from '../src/utils.js';
 import { AdapterRequest, BidderSpec, registerBidder, ServerResponse } from '../src/adapters/bidderFactory.js';
 import { BANNER, NATIVE, VIDEO } from '../src/mediaTypes.js';
 import { ortbConverter } from '../libraries/ortbConverter/converter.js';
@@ -12,6 +12,9 @@ import { getGlobal } from '../src/prebidGlobal.js';
 import { getAdUnitElement } from '../src/utils/adUnits.js';
 import { addEventTrackers } from '../libraries/pbsExtensions/processors/eventTrackers.js';
 import { setBidResponseVideoCache } from '../libraries/pbsExtensions/processors/video.js';
+import { extPrebidMediaType } from '../libraries/pbsExtensions/processors/mediaType.js';
+import { setBidResponseSafeRenderer, setRequestExtPrebidSafeRenderer } from '../libraries/pbsExtensions/processors/safeRenderer.js';
+import { BID_RESPONSE } from '../src/pbjsORTB.js';
 
 const BIDDER_CODE = 'pubstack';
 const GVLID = 1408;
@@ -76,6 +79,7 @@ const converter = ortbConverter({
     if (placementEnv?.PageHeight !== undefined) deepSetValue(request, `ext.prebid.page.height`, placementEnv.PageHeight);
     if (placementEnv?.ViewportHeight !== undefined) deepSetValue(request, `ext.prebid.page.viewportHeight`, placementEnv.ViewportHeight);
     if (placementEnv?.TimeFromNavigation !== undefined) deepSetValue(request, `ext.prebid.page.timeFromNavigation`, placementEnv.TimeFromNavigation);
+    setRequestExtPrebidSafeRenderer(request, bidderRequest);
     return request;
   },
   bidResponse(buildBidResponse, bid, context) {
@@ -84,9 +88,20 @@ const converter = ortbConverter({
       ttl: (bid as any).ttl ?? bid.exp ?? DEFAULT_TTL,
       netRevenue: (bid as any).netRevenue ?? DEFAULT_NET_REVENUE,
     };
+    bidResponse.meta = mergeDeep({}, bid.ext?.prebid?.meta, bidResponse.meta);
+    const targeting = (bid as any).ext?.prebid?.targeting;
+    if (isPlainObject(targeting)) bidResponse.adserverTargeting = targeting;
     addEventTrackers(bidResponse, bid);
     setBidResponseVideoCache(bidResponse, bid);
+    setBidResponseSafeRenderer(bidResponse, bid);
     return bidResponse;
+  },
+  overrides: {
+    [BID_RESPONSE]: {
+      mediaType(setResponseMediaType, bidResponse, bid, context) {
+        extPrebidMediaType(bidResponse, bid, context);
+      },
+    },
   },
 });
 

@@ -158,6 +158,7 @@ describe('pubstackBidAdapter', function () {
       expect(utils.deepAccess(request, 'data.ext.prebid.page.height')).to.be.a('number');
       expect(utils.deepAccess(request, 'data.ext.prebid.page.viewportHeight')).to.be.a('number');
       expect(utils.deepAccess(request, 'data.ext.prebid.page.timeFromNavigation')).to.be.a('number');
+      expect(utils.deepAccess(request, 'data.ext.prebid.safeRenderer')).to.equal(true);
     });
 
     it('sends the stackId in the bidder params when it is configured', function () {
@@ -398,6 +399,70 @@ describe('pubstackBidAdapter', function () {
       const bids = extractBids(spec.interpretResponse(serverResponse, request));
       expect(bids[0].videoCacheKey).to.equal('cache-uuid');
       expect(bids[0].vastUrl).to.equal('https://cache.pbstck.com/cache?uuid=cache-uuid');
+    });
+
+    it('reads the media type of a multi-format bid without mtype from ext.prebid.type, like the Prebid Server adapter', function () {
+      const bidRequest = createBidRequest({
+        bidId: 'bid-multiformat',
+        mediaTypes: {
+          banner: { sizes: [[300, 250]] },
+          video: { context: 'outstream', playerSize: [[640, 480]], mimes: ['video/mp4'] }
+        }
+      });
+      const request = spec.buildRequests([bidRequest], createBidderRequest(bidRequest));
+      const serverResponse = {
+        body: {
+          seatbid: [{
+            bid: [{
+              impid: 'bid-multiformat',
+              price: 1.5,
+              w: 640,
+              h: 480,
+              adm: '<VAST version="3.0"></VAST>',
+              crid: 'creative-multiformat',
+              ext: { prebid: { type: 'video' } }
+            }]
+          }]
+        }
+      };
+
+      const bids = extractBids(spec.interpretResponse(serverResponse, request));
+      expect(bids).to.have.lengthOf(1);
+      expect(bids[0].mediaType).to.equal('video');
+      expect(bids[0].vastXml).to.equal('<VAST version="3.0"></VAST>');
+    });
+
+    it('reads ext.prebid.meta, its renderer url and ext.prebid.targeting, like the Prebid Server adapter', function () {
+      const bidRequest = createBidRequest({ bidId: 'bid-meta' });
+      const request = spec.buildRequests([bidRequest], createBidderRequest(bidRequest));
+      const serverResponse = {
+        body: {
+          seatbid: [{
+            bid: [{
+              impid: 'bid-meta',
+              mtype: 1,
+              price: 1.5,
+              w: 300,
+              h: 250,
+              adm: '<div>ad</div>',
+              crid: 'creative-meta',
+              adomain: ['advertiser.com'],
+              ext: {
+                prebid: {
+                  meta: { networkName: 'spark', rendererUrl: 'https://cdn.pbstck.com/renderer.js' },
+                  targeting: { hb_cache_id: 'cache-uuid' }
+                }
+              }
+            }]
+          }]
+        }
+      };
+
+      const bids = extractBids(spec.interpretResponse(serverResponse, request));
+      expect(bids[0].meta.networkName).to.equal('spark');
+      expect(bids[0].meta.advertiserDomains).to.deep.equal(['advertiser.com']);
+      expect(bids[0].safeRenderer).to.deep.equal({ url: 'https://cdn.pbstck.com/renderer.js' });
+      expect(bids[0].adserverTargeting).to.deep.equal({ hb_cache_id: 'cache-uuid' });
     });
   });
 
