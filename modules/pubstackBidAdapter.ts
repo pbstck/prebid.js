@@ -161,7 +161,7 @@ const getUserSyncs: GetUserSyncFn = (syncOptions, _serverResponses, gdprConsent,
 
   return Array.from(siteIds).map(siteId => ({
     type: isIframeEnabled ? 'iframe' : 'image',
-    url: `${syncUrl}?consent=${payload}&siteId=${siteId}`,
+    url: `${syncUrl}?consent=${encodeURIComponent(payload)}&siteId=${siteId}`,
   }));
 };
 

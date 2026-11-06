@@ -495,6 +495,19 @@ describe('pubstackBidAdapter', function () {
       });
     });
 
+    it('url-encodes the consent payload so a + in its base64 survives', function () {
+      const bidRequest = createBidRequest({ bidId: 'bid-gpp-plus' });
+      const bidderRequest = createBidderRequest(bidRequest);
+      spec.buildRequests([bidRequest], bidderRequest);
+      const gppConsent = { gppString: 'DBABMA~~~CP', applicableSections: [7] };
+
+      const syncs = spec.getUserSyncs({ iframeEnabled: true, pixelEnabled: true }, [], null, null, gppConsent);
+
+      const siteSync = findSyncForSite(syncs, 'site-123');
+      expect(siteSync.url).to.include('%2B');
+      expect(getDecodedSyncPayload(siteSync)).to.deep.equal({ uspConsent: null, gpp: 'DBABMA~~~CP', gpp_sid: [7] });
+    });
+
     it('returns image sync when iframe sync is disabled', function () {
       const bidRequest = createBidRequest({ bidId: 'bid-pixel' });
       const bidderRequest = createBidderRequest(bidRequest);
