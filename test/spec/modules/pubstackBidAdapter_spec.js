@@ -158,7 +158,6 @@ describe('pubstackBidAdapter', function () {
       expect(utils.deepAccess(request, 'data.ext.prebid.page.height')).to.be.a('number');
       expect(utils.deepAccess(request, 'data.ext.prebid.page.viewportHeight')).to.be.a('number');
       expect(utils.deepAccess(request, 'data.ext.prebid.page.timeFromNavigation')).to.be.a('number');
-      expect(utils.deepAccess(request, 'data.ext.prebid.safeRenderer')).to.equal(true);
     });
 
     it('sends the stackId in the bidder params when it is configured', function () {
@@ -434,36 +433,27 @@ describe('pubstackBidAdapter', function () {
       }
     });
 
-    it('reads ext.prebid.meta, its renderer url and ext.prebid.targeting, like the Prebid Server adapter', function () {
-      const bidRequest = createBidRequest({ bidId: 'bid-meta' });
+    it('reads ext.prebid.targeting, like the Prebid Server adapter', function () {
+      const bidRequest = createBidRequest({ bidId: 'bid-targeting' });
       const request = spec.buildRequests([bidRequest], createBidderRequest(bidRequest));
       const serverResponse = {
         body: {
           seatbid: [{
             bid: [{
-              impid: 'bid-meta',
+              impid: 'bid-targeting',
               mtype: 1,
               price: 1.5,
               w: 300,
               h: 250,
               adm: '<div>ad</div>',
-              crid: 'creative-meta',
-              adomain: ['advertiser.com'],
-              ext: {
-                prebid: {
-                  meta: { networkName: 'spark', rendererUrl: 'https://cdn.pbstck.com/renderer.js' },
-                  targeting: { hb_cache_id: 'cache-uuid' }
-                }
-              }
+              crid: 'creative-targeting',
+              ext: { prebid: { targeting: { hb_cache_id: 'cache-uuid' } } }
             }]
           }]
         }
       };
 
       const bids = extractBids(spec.interpretResponse(serverResponse, request));
-      expect(bids[0].meta.networkName).to.equal('spark');
-      expect(bids[0].meta.advertiserDomains).to.deep.equal(['advertiser.com']);
-      expect(bids[0].safeRenderer).to.deep.equal({ url: 'https://cdn.pbstck.com/renderer.js' });
       expect(bids[0].adserverTargeting).to.deep.equal({ hb_cache_id: 'cache-uuid' });
     });
   });
